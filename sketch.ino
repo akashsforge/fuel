@@ -16,19 +16,25 @@
 #define LED_PIN           2
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+const char* n8nWebhookUrl = "https://akashpoojari.app.n8n.cloud/webhook-test/fuel-monitor";
 
 int   fuelPercent      = 0;
 float fuelLitres       = 0.0;
 float previousLitres   = 0.0;
 float addedLitres      = 0.0;       // litres added this session
 float sessionStartL    = 0.0;       // litres at start of fill
-float lastStableLitres = 0.0;
 bool  waterDetected    = false;
 bool  airDetected      = false;
 bool  firstReading     = true;
 bool  fillingActive    = false;     // true while fuel is being added
 int   readingCount     = 0;
-unsigned long lastDropTime = 0;
+
+// ── Air-detection rate tracking ─────────────────────────────────────
+unsigned long lastRateCheckTime   = 0;
+float         lastRateCheckLitres = 0.0;
+unsigned long airDetectedUntil    = 0;
+const unsigned long RATE_CHECK_INTERVAL_MS = 300;   // how often we sample for rate
+const float          AIR_DROP_RATE_LPS     = 20.0;  // litres/sec threshold — tune this
 
 // ── Display helpers ───────────────────────────────────────────────────────────
 void drawFuelBar(int pct) {
@@ -142,10 +148,11 @@ void loop() {
 
   // ── Fuel tracking ───────────────────────────────────────────────────
   if (firstReading) {
-    previousLitres   = fuelLitres;
-    sessionStartL    = fuelLitres;
-    lastStableLitres = fuelLitres;
-    firstReading     = false;
+    previousLitres     = fuelLitres;
+    sessionStartL      = fuelLitres;
+    lastRateCheckLitres = fuelLitres;
+    lastRateCheckTime   = millis();
+    firstReading       = false;
     Serial.print("Starting fuel level: ");
     Serial.print(fuelLitres, 1);
     Serial.println("L");
@@ -196,19 +203,28 @@ void loop() {
     }
   }
 
-  // ── Air detection ───────────────────────────────────────────────────
+  // ── Air detection: rate of change (L/s) over a fixed window ─────────
   unsigned long now = millis();
-  float dropAmount  = lastStableLitres - fuelLitres;
 
-  if (dropAmount > 3.0) {
-    if ((now - lastDropTime) < 2000) {
+  if (now - lastRateCheckTime >= RATE_CHECK_INTERVAL_MS) {
+    float dropAmount = lastRateCheckLitres - fuelLitres;
+    float elapsedSec = (now - lastRateCheckTime) / 1000.0;
+    float dropRate   = dropAmount / elapsedSec;   // litres per second
+
+    if (dropRate > AIR_DROP_RATE_LPS) {
       airDetected = true;
-      Serial.println("!! AIR DETECTED in fuel line !!");
+      airDetectedUntil = now + 3000;   // keep alert visible for 3s
+      Serial.print("!! AIR DETECTED — rate: ");
+      Serial.print(dropRate, 1);
+      Serial.println(" L/s !!");
     }
-    lastDropTime = now;
-  } else {
-    airDetected      = false;
-    lastStableLitres = fuelLitres;
+
+    lastRateCheckLitres = fuelLitres;
+    lastRateCheckTime   = now;
+  }
+
+  if (airDetected && now > airDetectedUntil) {
+    airDetected = false;
   }
 
   // ── Water detection ─────────────────────────────────────────────────
@@ -239,5 +255,5 @@ void loop() {
   Serial.print(" | Water:"); Serial.print(waterDetected ? "YES":"No");
   Serial.print(" | Air:"); Serial.println(airDetected ? "YES":"No");
 
-  delay(500);
+  delay(100);
 }
