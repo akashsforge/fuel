@@ -2,29 +2,12 @@
   "version": 1,
   "author": "Fuel Monitor Project",
   "editor": "wokwi",
+  "serialMonitor": {"display": "always", "newline": "lf"},
   "parts": [
     { "type": "board-esp32-devkit-v1", "id": "esp", "top": 100, "left": 300, "attrs": {} },
-    {
-      "type": "board-ssd1306",
-      "id": "oled1",
-      "top": 0,
-      "left": 300,
-      "attrs": { "i2cAddress": "0x3c" }
-    },
-    {
-      "type": "wokwi-potentiometer",
-      "id": "pot",
-      "top": 300,
-      "left": 0,
-      "attrs": { "value": "50" }
-    },
-    {
-      "type": "wokwi-pushbutton",
-      "id": "btn",
-      "top": 420,
-      "left": 0,
-      "attrs": { "color": "green" }
-    },
+    { "type": "board-ssd1306", "id": "oled1", "top": 0, "left": 300, "attrs": { "i2cAddress": "0x3c" } },
+    { "type": "wokwi-potentiometer", "id": "pot", "top": 300, "left": 0, "attrs": { "value": "50" } },
+    { "type": "wokwi-pushbutton", "id": "btn", "top": 420, "left": 0, "attrs": { "color": "green" } },
     { "type": "wokwi-led", "id": "led1", "top": 420, "left": 550, "attrs": { "color": "red" } },
     { "type": "wokwi-resistor", "id": "r1", "top": 420, "left": 460, "attrs": { "value": "220" } }
   ],
@@ -40,9 +23,7 @@
     [ "esp:GND.3", "btn:2.l", "black", [] ],
     [ "esp:D2", "r1:1", "white", [] ],
     [ "r1:2", "led1:A", "white", [] ],
-    [ "esp:GND.4", "led1:K", "black", [] ],
-    [ "led1:C", "esp:GND.1", "green", [ "v-1.2", "h-133", "v-211.2" ] ],
-    [ "btn:2.l", "esp:GND.2", "green", [ "h-38.4", "v28", "h259.2", "v-240" ] ]
+    [ "led1:C", "esp:GND.1", "black", [] ]
   ],
   "dependencies": {}
 }
